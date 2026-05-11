@@ -5,8 +5,9 @@ import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { extractUrlFromImage } from './src/services/qrService';
-import { processAnalysis } from './src/services/analysisManager';
+import analyzeHandler from './api/analyze.js';
+import scanHandler from './api/scan.js';
+import redirectHandler from './api/redirect.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,36 +19,10 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  const upload = multer({ storage: multer.memoryStorage() });
-
-  // API Routes (matching Vercel functions for local dev)
-  app.post('/api/scan', upload.single('qrImage'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No image uploaded' });
-      }
-      const content = await extractUrlFromImage(req.file.buffer);
-      const result = await processAnalysis(content);
-      res.json(result);
-    } catch (error: any) {
-      console.error('Scan Error:', error);
-      res.status(500).json({ error: error.message || 'Internal server error' });
-    }
-  });
-
-  app.post('/api/analyze', async (req, res) => {
-    try {
-      const { url } = req.body;
-      if (!url) {
-        return res.status(400).json({ error: 'No URL provided' });
-      }
-      const result = await processAnalysis(url);
-      res.json(result);
-    } catch (error: any) {
-      console.error('Analysis Error:', error);
-      res.status(500).json({ error: error.message || 'Internal server error' });
-    }
-  });
+  // Use Vercel handlers for local development
+  app.post('/api/scan', scanHandler);
+  app.post('/api/analyze', analyzeHandler);
+  app.post('/api/redirect', redirectHandler);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
