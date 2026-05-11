@@ -1,0 +1,6 @@
+{
+  "name": "QUISHIELD",
+  "description": "A technical prototype for detecting QR-code phishing (Quishing) by extracting URLs, tracing redirect chains, and analyzing risk patterns.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}
