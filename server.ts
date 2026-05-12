@@ -27,25 +27,37 @@ async function startServer() {
   const upload = multer({ 
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB limit
+      fileSize: 10 * 1024 * 1024, // 10MB limit
     }
   });
 
   // API Routes
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', version: '1.1', time: new Date().toISOString() });
+  });
+
   app.post('/api/scan', upload.single('qrImage'), async (req, res, next) => {
     try {
-      console.log('Received scan request');
+      console.log('--- SCAN REQUEST START ---');
       if (!req.file) {
+        console.log('Error: No file in request');
         return res.status(400).json({ error: 'No image uploaded' });
       }
 
-      console.log('Extracting URL from image...');
+      console.log(`Extracting URL from image: ${req.file.originalname} (${req.file.size} bytes)`);
       const originalUrl = await extractUrlFromImage(req.file.buffer);
-      console.log('Extracted URL:', originalUrl);
+      console.log('Extracted URL SUCCESS:', originalUrl);
       
+      if (!originalUrl || originalUrl.trim().length === 0) {
+        throw new Error('Extracted URL is empty or invalid.');
+      }
+
       const result = await processAnalysis(originalUrl);
+      console.log('--- SCAN REQUEST COMPLETE ---');
       res.json(result);
     } catch (error: any) {
+      console.error('--- SCAN REQUEST FAILED ---');
+      console.error(error);
       next(error);
     }
   });
@@ -104,9 +116,12 @@ async function startServer() {
   // Global error handler
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('SERVER ERROR:', err);
+    // Ensure we always return JSON
+    res.setHeader('Content-Type', 'application/json');
     res.status(err.status || 500).json({
       error: err.message || 'Internal server error',
-      path: req.path
+      path: req.path,
+      timestamp: new Date().toISOString()
     });
   });
 

@@ -39,8 +39,10 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         data = await response.json();
       } else {
         const text = await response.text();
-        console.error('Non-JSON response from server:', text);
-        throw new Error('Server returned an unexpected response format.');
+        const status = response.status;
+        console.error(`Non-JSON response (URL ${status}):`, text.substring(0, 500));
+        const errorSnippet = text.substring(0, 100).replace(/<[^>]*>?/gm, '').trim();
+        throw new Error(`[v1.1 Error ${status}] ${errorSnippet || 'Invalid format'}`);
       }
 
       if (response.ok) {
@@ -83,8 +85,10 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         data = await response.json();
       } else {
         const text = await response.text();
-        console.error('Non-JSON response from server:', text);
-        throw new Error('Server returned an unexpected response format.');
+        const status = response.status;
+        console.error(`Non-JSON response (File ${status}):`, text.substring(0, 500));
+        const errorSnippet = text.substring(0, 100).replace(/<[^>]*>?/gm, '').trim();
+        throw new Error(`[v1.1 Error ${status}] ${errorSnippet || 'Invalid format'}`);
       }
 
       if (response.ok) {
