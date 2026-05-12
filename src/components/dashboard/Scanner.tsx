@@ -42,7 +42,7 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         const status = response.status;
         console.error(`Non-JSON response (URL ${status}):`, text.substring(0, 500));
         const errorSnippet = text.substring(0, 150).replace(/<[^>]*>?/gm, '').trim();
-        throw new Error(`[v1.3 Error ${status}] ${errorSnippet || 'Invalid format'}`);
+        throw new Error(`[v1.4 Error ${status}] ${errorSnippet || 'Invalid format'}`);
       }
 
       if (response.ok) {
@@ -88,7 +88,7 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         const status = response.status;
         console.error(`Non-JSON response (File ${status}):`, text.substring(0, 500));
         const errorSnippet = text.substring(0, 150).replace(/<[^>]*>?/gm, '').trim();
-        throw new Error(`[v1.3 Error ${status}] ${errorSnippet || 'Invalid format'}`);
+        throw new Error(`[v1.4 Error ${status}] ${errorSnippet || 'Invalid format'}`);
       }
 
       if (response.ok) {
