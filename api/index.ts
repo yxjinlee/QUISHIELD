@@ -19,7 +19,7 @@ app.use(express.json());
 
 // Global logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
@@ -32,10 +32,10 @@ const upload = multer({
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.5.1', time: new Date().toISOString() });
+  res.json({ status: 'ok', version: '1.5.2', time: new Date().toISOString() });
 });
 
-app.post('/api/scan', upload.single('qrImage'), async (req, res, next) => {
+app.post('/api/scan', upload.single('qrImage'), async (req, res) => {
   try {
     console.log('--- SCAN REQUEST START ---');
     if (!req.file) {
@@ -57,11 +57,14 @@ app.post('/api/scan', upload.single('qrImage'), async (req, res, next) => {
   } catch (error: any) {
     console.error('--- SCAN REQUEST FAILED ---');
     console.error(error);
-    next(error);
+    res.status(500).json({
+      error: error.message || 'Scan processing failed',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
-app.post('/api/analyze-url', async (req, res, next) => {
+app.post('/api/analyze-url', async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) {
@@ -71,18 +74,20 @@ app.post('/api/analyze-url', async (req, res, next) => {
     const result = await processAnalysis(url);
     res.json(result);
   } catch (error: any) {
-    next(error);
+    console.error('Analyze URL error:', error);
+    res.status(500).json({
+      error: error.message || 'URL analysis failed',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
 async function processAnalysis(originalUrl: string) {
   console.log('Processing analysis for:', originalUrl);
-  // 2. Trace Redirects
   const redirectChain = await traceRedirects(originalUrl);
   console.log('Redirect chain:', redirectChain);
   const finalUrl = redirectChain[redirectChain.length - 1];
 
-  // 3. Analyze
   const { score, level, details } = analyzeUrl(originalUrl, finalUrl, redirectChain);
   console.log('Analysis result:', { score, level });
 
@@ -97,16 +102,29 @@ async function processAnalysis(originalUrl: string) {
   };
 }
 
-// Vite and Static Files Handling
-async function setupEnvironment() {
+// Global error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('--- GLOBAL SERVER ERROR ---');
+  console.error(err);
+  res.setHeader('Content-Type', 'application/json');
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error',
+    path: req.path,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Vite and Static Files Handling (only for local development)
+async function startApp() {
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    console.log('Starting Vite development server...');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else if (!process.env.VERCEL) {
-    // Standard production (non-Vercel)
+    // Normal production server
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -117,27 +135,15 @@ async function setupEnvironment() {
     });
   }
 
-  // Global error handler
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('--- GLOBAL SERVER ERROR ---');
-    console.error(err);
-    res.setHeader('Content-Type', 'application/json');
-    res.status(err.status || 500).json({
-      error: err.message || 'Internal server error',
-      path: req.path,
-      timestamp: new Date().toISOString()
-    });
-  });
-
   if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server v1.5.1 running on http://0.0.0.0:${PORT}`);
+      console.log(`Server v1.5.2 running on http://0.0.0.0:${PORT}`);
     });
   }
 }
 
-setupEnvironment().catch(err => {
-  console.error("Setup error:", err);
+startApp().catch(err => {
+  console.error("Start app error:", err);
 });
 
 export default app;
