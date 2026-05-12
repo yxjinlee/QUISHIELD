@@ -1,7 +1,6 @@
 import express from 'express';
 import multer from 'multer';
 import cors from 'cors';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { extractUrlFromImage } from './services/qrService.js';
@@ -32,7 +31,7 @@ const upload = multer({
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.5.2', time: new Date().toISOString() });
+  res.json({ status: 'ok', version: '1.6', time: new Date().toISOString() });
 });
 
 app.post('/api/scan', upload.single('qrImage'), async (req, res) => {
@@ -114,36 +113,35 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Vite and Static Files Handling (only for local development)
-async function startApp() {
-  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-    console.log('Starting Vite development server...');
+// Environment setup
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  const startDev = async () => {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else if (!process.env.VERCEL) {
-    // Normal production server
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      if (req.path.startsWith('/api')) {
-        return res.status(404).json({ error: 'API route not found' });
-      }
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+    
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server v1.5.2 running on http://0.0.0.0:${PORT}`);
+      console.log(`Development Server v1.6 running on http://localhost:${PORT}`);
     });
-  }
-}
+  };
+  startDev().catch(err => console.error("Dev server error:", err));
+} else if (!process.env.VERCEL) {
+  // Standard production server (Not Vercel)
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ error: 'API route not found' });
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 
-startApp().catch(err => {
-  console.error("Start app error:", err);
-});
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Production Server v1.6 running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;

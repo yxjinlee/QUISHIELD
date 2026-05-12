@@ -1,4 +1,4 @@
-import { AnalysisDetails, RiskLevel } from '../../src/types';
+import { AnalysisDetails, RiskLevel } from '../../src/types.js';
 
 const SUSPICIOUS_KEYWORDS = [
   'login', 'verify', 'update', 'account', 'secure', 'bank', 'confirm',

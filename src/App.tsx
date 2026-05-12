@@ -132,7 +132,7 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
             >
               <div className={`max-w-2xl mx-auto text-center mb-12 transition-opacity duration-300 ${isCameraOpen ? 'opacity-0' : 'opacity-100'}`}>
-                <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-gray-50 mb-4 tracking-tight">QR Security Intelligence <span className="text-xs opacity-50">v1.5.2</span></h2>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-gray-50 mb-4 tracking-tight">QR Security Intelligence <span className="text-xs opacity-50">v1.6</span></h2>
                 <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
                   Instantly decode QR codes, trace redirect chains, and reveal hidden phishing patterns before they reach your device.
                 </p>
