@@ -1,37 +1,53 @@
 export async function traceRedirects(initialUrl: string): Promise<string[]> {
-  const chain: string[] = [initialUrl];
-  let currentUrl = initialUrl;
+  // Ensure the URL has a protocol
+  let sanitizedUrl = initialUrl.trim();
+  if (!sanitizedUrl.startsWith('http://') && !sanitizedUrl.startsWith('https://')) {
+    sanitizedUrl = 'https://' + sanitizedUrl;
+  }
+
+  const chain: string[] = [sanitizedUrl];
+  let currentUrl = sanitizedUrl;
   const maxRedirects = 10;
+  const timeoutMs = 5000;
   
   try {
     for (let i = 0; i < maxRedirects; i++) {
-       // We use a fetch with redirect manual to capture the path
-       const response = await fetch(currentUrl, {
-         method: 'HEAD', // Faster than GET
-         redirect: 'manual',
-         headers: {
-           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-         }
-       });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-       if (response.status >= 300 && response.status < 400) {
-         const location = response.headers.get('location');
-         if (location) {
-           // Handle relative URLs
-           const nextUrl = new URL(location, currentUrl).toString();
-           if (chain.includes(nextUrl)) break; // Prevent loops
-           chain.push(nextUrl);
-           currentUrl = nextUrl;
-         } else {
-           break;
-         }
-       } else {
-         break;
-       }
+        try {
+          const response = await fetch(currentUrl, {
+            method: 'HEAD',
+            redirect: 'manual',
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.status >= 300 && response.status < 400) {
+            const location = response.headers.get('location');
+            if (location) {
+              const nextUrl = new URL(location, currentUrl).toString();
+              if (chain.includes(nextUrl)) break;
+              chain.push(nextUrl);
+              currentUrl = nextUrl;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          console.error(`Fetch error for ${currentUrl}:`, fetchError.message);
+          break;
+        }
     }
   } catch (error) {
     console.error('Error tracing redirects:', error);
-    // Even on error, we return what we have so far
   }
   
   return chain;

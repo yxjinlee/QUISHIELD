@@ -15,8 +15,26 @@ const SHORTENED_DOMAINS = [
 ];
 
 export function analyzeUrl(url: string, finalUrl: string, redirectChain: string[]): { score: number; level: RiskLevel; details: AnalysisDetails } {
-  const urlObj = new URL(url);
-  const finalUrlObj = new URL(finalUrl);
+  let urlObj: URL;
+  let finalUrlObj: URL;
+
+  try {
+    urlObj = new URL(url);
+  } catch (e) {
+    // If it's invalid, try prepending https:// as a fallback
+    try {
+      urlObj = new URL('https://' + url);
+    } catch (e2) {
+      // Very fallback
+      urlObj = new URL('https://invalid-url.com');
+    }
+  }
+
+  try {
+    finalUrlObj = new URL(finalUrl);
+  } catch (e) {
+    finalUrlObj = urlObj;
+  }
   
   const details: AnalysisDetails = {
     usesIpAddress: /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(urlObj.hostname),

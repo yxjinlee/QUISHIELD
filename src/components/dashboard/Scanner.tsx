@@ -33,7 +33,15 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         body: JSON.stringify({ url }),
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON response from server:', text);
+        throw new Error('Server returned an unexpected response format.');
+      }
 
       if (response.ok) {
         onScanComplete(data);
@@ -41,9 +49,10 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         isTriggeredRef.current = false;
         onScanError(data.error || 'Analysis failed. Please try again.');
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('URL analysis error:', err);
       isTriggeredRef.current = false;
-      onScanError('Network error. Please try again later.');
+      onScanError(err.message || 'Network error. Please try again later.');
     }
   };
 
@@ -68,7 +77,15 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         body: formData,
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON response from server:', text);
+        throw new Error('Server returned an unexpected response format.');
+      }
 
       if (response.ok) {
         onScanComplete(data);
@@ -76,9 +93,10 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         isTriggeredRef.current = false;
         onScanError(data.error || 'Failed to scan image. Ensure the image contains a clear QR code.');
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Scan capture error:', err);
       isTriggeredRef.current = false;
-      onScanError('Network error. Please try again later.');
+      onScanError(err.message || 'Network error. Please try again later.');
     }
   };
 
