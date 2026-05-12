@@ -3,9 +3,8 @@ import multer from 'multer';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { extractUrlFromImage } from './services/qrService.js';
-import { traceRedirects } from './services/redirectService.js';
-import { analyzeUrl } from './services/analysisService.js';
+import jsQR from 'jsqr';
+import { Jimp } from 'jimp';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,132 +15,186 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Global logging middleware
+// Global logging
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[REQ] ${new Date().toISOString()} ${req.method} ${req.path}`);
   next();
 });
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  }
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
+
+// TYPES (Local to keep self-contained)
+export enum RiskLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
+}
+
+export interface AnalysisDetails {
+  shortenerFound: boolean;
+  suspiciousKeywords: string[];
+  redirectCount: number;
+  domainMismatch: boolean;
+  isEncoded: boolean;
+  isHttps: boolean;
+  urlLength: number;
+}
+
+// LOGIC: QR Extraction
+async function extractUrlFromImage(buffer: Buffer): Promise<string> {
+  try {
+    const uint8Array = new Uint8Array(buffer);
+    const image = await Jimp.read(uint8Array as any);
+    const { data, width, height } = image.bitmap;
+    const code = jsQR(new Uint8ClampedArray(data), width, height);
+    if (code) return code.data;
+    throw new Error('QR code not detected in image');
+  } catch (err: any) {
+    throw new Error(`QR Extraction failed: ${err.message}`);
+  }
+}
+
+// LOGIC: Redirect Tracing
+async function traceRedirects(initialUrl: string): Promise<string[]> {
+  let current = initialUrl.trim();
+  if (!current.startsWith('http')) current = 'https://' + current;
+  const chain: string[] = [current];
+  const max = 8;
+  
+  try {
+    for (let i = 0; i < max; i++) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 4000);
+      try {
+        const res = await fetch(current, {
+          method: 'HEAD',
+          redirect: 'manual',
+          signal: controller.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        clearTimeout(id);
+        const loc = res.headers.get('location');
+        if (loc && (res.status >= 300 && res.status < 400)) {
+          const next = new URL(loc, current).toString();
+          if (chain.includes(next)) break;
+          chain.push(next);
+          current = next;
+        } else break;
+      } catch {
+        clearTimeout(id);
+        break;
+      }
+    }
+  } catch {}
+  return chain;
+}
+
+// LOGIC: Analysis
+function analyzeUrl(originalUrl: string, finalUrl: string, chain: string[]) {
+  const suspicious = ['login', 'verify', 'update', 'account', 'secure', 'bank', 'confirm', 'password', 'signin', 'support'];
+  const shorteners = ['bit.ly', 't.co', 'goo.gl', 'tinyurl.com', 'is.gd', 'buff.ly', 'ow.ly'];
+  
+  const details: AnalysisDetails = {
+    shortenerFound: shorteners.some(s => originalUrl.toLowerCase().includes(s)),
+    suspiciousKeywords: suspicious.filter(k => finalUrl.toLowerCase().includes(k)),
+    redirectCount: chain.length - 1,
+    domainMismatch: false,
+    isEncoded: /%[0-9A-F]{2}/i.test(originalUrl) || /base64/i.test(originalUrl),
+    isHttps: finalUrl.startsWith('https:'),
+    urlLength: finalUrl.length
+  };
+
+  try {
+    const oDomain = new URL(originalUrl.startsWith('http') ? originalUrl : 'https://'+originalUrl).hostname;
+    const fDomain = new URL(finalUrl).hostname;
+    details.domainMismatch = oDomain !== fDomain && !details.shortenerFound;
+  } catch {}
+
+  let score = 0;
+  if (!details.isHttps) score += 20;
+  if (details.shortenerFound) score += 20;
+  if (details.redirectCount > 1) score += 15 * (details.redirectCount - 1);
+  if (details.suspiciousKeywords.length > 0) score += 25 * details.suspiciousKeywords.length;
+  if (details.domainMismatch) score += 30;
+  if (details.isEncoded) score += 15;
+  if (details.urlLength > 150) score += 15;
+
+  let level = RiskLevel.LOW;
+  if (score >= 70) level = RiskLevel.CRITICAL;
+  else if (score >= 40) level = RiskLevel.HIGH;
+  else if (score >= 20) level = RiskLevel.MEDIUM;
+
+  return { score: Math.min(score, 100), level, details };
+}
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.6', time: new Date().toISOString() });
+  res.json({ status: 'ok', version: '2.0-beta', time: new Date().toISOString() });
 });
 
 app.post('/api/scan', upload.single('qrImage'), async (req, res) => {
   try {
-    console.log('--- SCAN REQUEST START ---');
-    if (!req.file) {
-      console.log('Error: No file in request');
-      return res.status(400).json({ error: 'No image uploaded' });
-    }
-
-    console.log(`Extracting URL from image: ${req.file.originalname} (${req.file.size} bytes)`);
-    const originalUrl = await extractUrlFromImage(req.file.buffer);
-    console.log('Extracted URL SUCCESS:', originalUrl);
-    
-    if (!originalUrl || originalUrl.trim().length === 0) {
-      throw new Error('Extracted URL is empty or invalid.');
-    }
-
-    const result = await processAnalysis(originalUrl);
-    console.log('--- SCAN REQUEST COMPLETE ---');
-    res.json(result);
-  } catch (error: any) {
-    console.error('--- SCAN REQUEST FAILED ---');
-    console.error(error);
-    res.status(500).json({
-      error: error.message || 'Scan processing failed',
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const url = await extractUrlFromImage(req.file.buffer);
+    const chain = await traceRedirects(url);
+    const final = chain[chain.length - 1];
+    const analysis = analyzeUrl(url, final, chain);
+    res.json({
+      originalUrl: url,
+      finalUrl: final,
+      redirectChain: chain,
+      riskScore: analysis.score,
+      riskLevel: analysis.level,
+      analysis: analysis.details,
       timestamp: new Date().toISOString()
     });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.post('/api/analyze-url', async (req, res) => {
   try {
     const { url } = req.body;
-    if (!url) {
-      return res.status(400).json({ error: 'No URL provided' });
-    }
-
-    const result = await processAnalysis(url);
-    res.json(result);
-  } catch (error: any) {
-    console.error('Analyze URL error:', error);
-    res.status(500).json({
-      error: error.message || 'URL analysis failed',
+    if (!url) return res.status(400).json({ error: 'No URL provided' });
+    const chain = await traceRedirects(url);
+    const final = chain[chain.length - 1];
+    const analysis = analyzeUrl(url, final, chain);
+    res.json({
+      originalUrl: url,
+      finalUrl: final,
+      redirectChain: chain,
+      riskScore: analysis.score,
+      riskLevel: analysis.level,
+      analysis: analysis.details,
       timestamp: new Date().toISOString()
     });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-async function processAnalysis(originalUrl: string) {
-  console.log('Processing analysis for:', originalUrl);
-  const redirectChain = await traceRedirects(originalUrl);
-  console.log('Redirect chain:', redirectChain);
-  const finalUrl = redirectChain[redirectChain.length - 1];
-
-  const { score, level, details } = analyzeUrl(originalUrl, finalUrl, redirectChain);
-  console.log('Analysis result:', { score, level });
-
-  return {
-    originalUrl,
-    finalUrl,
-    redirectChain,
-    riskScore: score,
-    riskLevel: level,
-    analysis: details,
-    timestamp: new Date().toISOString()
-  };
-}
-
-// Global error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('--- GLOBAL SERVER ERROR ---');
-  console.error(err);
-  res.setHeader('Content-Type', 'application/json');
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    path: req.path,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Environment setup
+// Environment setup for local dev
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   const startDev = async () => {
     const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
+    const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
     app.use(vite.middlewares);
-    
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Development Server v1.6 running on http://localhost:${PORT}`);
-    });
+    app.listen(PORT, '0.0.0.0', () => console.log(`Dev Server running at http://localhost:${PORT}`));
   };
-  startDev().catch(err => console.error("Dev server error:", err));
+  startDev().catch(console.error);
 } else if (!process.env.VERCEL) {
-  // Standard production server (Not Vercel)
   const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
   app.get('*', (req, res) => {
-    if (req.path.startsWith('/api')) {
-      return res.status(404).json({ error: 'API route not found' });
-    }
+    if (req.path.startsWith('/api')) return res.status(404).json({ error: 'API not found' });
     res.sendFile(path.join(distPath, 'index.html'));
   });
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Production Server v1.6 running on http://localhost:${PORT}`);
-  });
+  app.listen(PORT, '0.0.0.0', () => console.log(`Prod Server running at http://localhost:${PORT}`));
 }
 
 export default app;

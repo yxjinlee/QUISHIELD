@@ -8,25 +8,26 @@ interface ResultViewProps {
 }
 
 export default function ResultView({ result }: ResultViewProps) {
-  const isDangerous = result.riskLevel === RiskLevel.DANGEROUS;
-  const isWarning = result.riskLevel === RiskLevel.WARNING;
-  const isSafe = result.riskLevel === RiskLevel.SAFE;
+  const isDangerous = result.riskLevel === RiskLevel.CRITICAL || result.riskLevel === RiskLevel.HIGH;
+  const isWarning = result.riskLevel === RiskLevel.MEDIUM;
+  const isSafe = result.riskLevel === RiskLevel.LOW;
 
   const getStatusColor = () => {
-    if (isDangerous) return 'text-[#FF4444]';
-    if (isWarning) return 'text-[#F27D26]';
+    if (result.riskLevel === RiskLevel.CRITICAL) return 'text-[#FF4444]';
+    if (result.riskLevel === RiskLevel.HIGH) return 'text-[#FF4444]';
+    if (result.riskLevel === RiskLevel.MEDIUM) return 'text-[#F27D26]';
     return 'text-[#00FF00]';
   };
 
   const getStatusBg = () => {
-    if (isDangerous) return 'bg-[#FF4444]/10 border-[#FF4444]/20';
-    if (isWarning) return 'bg-[#F27D26]/10 border-[#F27D26]/20';
+    if (result.riskLevel === RiskLevel.CRITICAL || result.riskLevel === RiskLevel.HIGH) return 'bg-[#FF4444]/10 border-[#FF4444]/20';
+    if (result.riskLevel === RiskLevel.MEDIUM) return 'bg-[#F27D26]/10 border-[#F27D26]/20';
     return 'bg-[#00FF00]/10 border-[#00FF00]/20';
   };
 
   const getStatusIcon = () => {
-    if (isDangerous) return <ShieldAlert className="w-10 h-10 text-[#FF4444]" />;
-    if (isWarning) return <AlertTriangle className="w-10 h-10 text-[#F27D26]" />;
+    if (result.riskLevel === RiskLevel.CRITICAL || result.riskLevel === RiskLevel.HIGH) return <ShieldAlert className="w-10 h-10 text-[#FF4444]" />;
+    if (result.riskLevel === RiskLevel.MEDIUM) return <AlertTriangle className="w-10 h-10 text-[#F27D26]" />;
     return <CheckCircle className="w-10 h-10 text-[#00FF00]" />;
   };
 
@@ -148,7 +149,7 @@ export default function ResultView({ result }: ResultViewProps) {
                    <span className="font-mono font-bold text-[#F27D26] bg-[#F27D26]/10 px-3 py-1 rounded-lg">+{result.redirectChain.length - 1}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-[#121212] border border-gray-100 dark:border-white/5">
-                   <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">URL Complexity</span>
+                   <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">URL complexity</span>
                    <span className="font-mono font-bold text-gray-700 dark:text-white">{result.analysis.urlLength}B</span>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-[#121212] border border-gray-100 dark:border-white/5">
@@ -167,11 +168,10 @@ export default function ResultView({ result }: ResultViewProps) {
                        {k}
                      </span>
                    ))}
-                   {result.analysis.usesIpAddress && <span className="px-3 py-1.5 rounded-xl bg-red-900/20 text-red-500 text-[10px] font-extrabold border border-red-500/20 uppercase">IP_ADDR</span>}
-                   {result.analysis.suspiciousTLD && <span className="px-3 py-1.5 rounded-xl bg-red-900/20 text-red-500 text-[10px] font-extrabold border border-red-500/20 uppercase">ROGUE_TLD</span>}
-                   {result.analysis.subdomainDepth > 2 && <span className="px-3 py-1.5 rounded-xl bg-red-900/20 text-red-500 text-[10px] font-extrabold border border-red-500/20 uppercase">SUB_DEPTH</span>}
-                   {result.analysis.isShortened && <span className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] font-extrabold border border-amber-500/20 uppercase">SHORT_URL</span>}
-                   {result.analysis.suspiciousKeywords.length === 0 && !result.analysis.usesIpAddress && !result.analysis.suspiciousTLD && (
+                   {result.analysis.domainMismatch && <span className="px-3 py-1.5 rounded-xl bg-red-900/20 text-red-500 text-[10px] font-extrabold border border-red-500/20 uppercase">DOMAIN_MISMATCH</span>}
+                   {result.analysis.shortenerFound && <span className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] font-extrabold border border-amber-500/20 uppercase">SHORT_URL</span>}
+                   {result.analysis.isEncoded && <span className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 text-[10px] font-extrabold border border-amber-500/20 uppercase">ENCODED_PAYLOAD</span>}
+                   {result.analysis.suspiciousKeywords.length === 0 && !result.analysis.domainMismatch && !result.analysis.shortenerFound && (
                      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 italic">Heuristics: Normal</span>
                    )}
                 </div>

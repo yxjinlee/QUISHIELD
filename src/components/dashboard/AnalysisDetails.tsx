@@ -16,11 +16,11 @@ export default function AnalysisDetails({ analysis, score }: AnalysisDetailsProp
       color: analysis.isHttps ? 'text-[#00FF00]' : 'text-[#FF4444]'
     },
     {
-      icon: <MapPin className="w-4 h-4" />,
-      label: 'Hostname Format',
-      value: analysis.usesIpAddress ? 'Direct IP Address' : 'Standard Hostname',
-      impact: analysis.usesIpAddress ? 'Critical' : 'Safe',
-      color: analysis.usesIpAddress ? 'text-[#FF4444]' : 'text-[#00FF00]'
+      icon: <Link className="w-4 h-4" />,
+      label: 'Domain Origin',
+      value: analysis.domainMismatch ? 'Mismatch Detected' : 'Verified Match',
+      impact: analysis.domainMismatch ? 'High Risk' : 'Safe',
+      color: analysis.domainMismatch ? 'text-[#FF4444]' : 'text-[#00FF00]'
     },
     {
       icon: <Text className="w-4 h-4" />,
@@ -30,11 +30,11 @@ export default function AnalysisDetails({ analysis, score }: AnalysisDetailsProp
       color: analysis.suspiciousKeywords.length > 0 ? 'text-[#F27D26]' : 'text-[#00FF00]'
     },
     {
-      icon: <Link className="w-4 h-4" />,
-      label: 'Subdomain Depth',
-      value: `${analysis.subdomainDepth} Levels`,
-      impact: analysis.subdomainDepth > 2 ? 'Warning' : 'Low',
-      color: analysis.subdomainDepth > 2 ? 'text-[#F27D26]' : 'text-[#888]'
+      icon: <AlertCircle className="w-4 h-4" />,
+      label: 'Redirect Chain',
+      value: `${analysis.redirectCount} Hops`,
+      impact: analysis.redirectCount > 1 ? 'Suspicious' : 'Normal',
+      color: analysis.redirectCount > 1 ? 'text-[#F27D26]' : 'text-[#888]'
     }
   ];
 

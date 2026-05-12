@@ -1,18 +1,18 @@
 export enum RiskLevel {
-  SAFE = 'safe',
-  WARNING = 'warning',
-  DANGEROUS = 'dangerous',
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
 }
 
 export interface AnalysisDetails {
-  usesIpAddress: boolean;
-  isHttps: boolean;
-  subdomainDepth: number;
-  urlLength: number;
-  hyphenCount: number;
+  shortenerFound: boolean;
   suspiciousKeywords: string[];
-  suspiciousTLD: boolean;
-  isShortened: boolean;
+  redirectCount: number;
+  domainMismatch: boolean;
+  isEncoded: boolean;
+  isHttps: boolean;
+  urlLength: number;
 }
 
 export interface ScanResult {
