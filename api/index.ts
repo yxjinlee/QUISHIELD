@@ -4,9 +4,9 @@ import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { extractUrlFromImage } from '../src/services/qrService.js';
-import { traceRedirects } from '../src/services/redirectService.js';
-import { analyzeUrl } from '../src/services/analysisService.js';
+import { extractUrlFromImage } from './services/qrService.js';
+import { traceRedirects } from './services/redirectService.js';
+import { analyzeUrl } from './services/analysisService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,7 +32,7 @@ const upload = multer({
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.4', time: new Date().toISOString() });
+  res.json({ status: 'ok', version: '1.5.1', time: new Date().toISOString() });
 });
 
 app.post('/api/scan', upload.single('qrImage'), async (req, res, next) => {
@@ -105,11 +105,11 @@ async function setupEnvironment() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
+    // Standard production (non-Vercel)
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      // If it's an API route that reached here, return 404
       if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API route not found' });
       }
@@ -131,7 +131,7 @@ async function setupEnvironment() {
 
   if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server v1.4 running on http://0.0.0.0:${PORT}`);
+      console.log(`Server v1.5.1 running on http://0.0.0.0:${PORT}`);
     });
   }
 }
