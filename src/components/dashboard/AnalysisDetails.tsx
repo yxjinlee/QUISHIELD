@@ -1,45 +1,40 @@
-import { AnalysisDetails as IAnalysisDetails, QrType } from '../../types';
+import { AnalysisDetails as IAnalysisDetails } from '../../types';
 import { AlertCircle, ShieldCheck, Link, Text, MapPin, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface AnalysisDetailsProps {
   analysis: IAnalysisDetails;
   score: number;
-  type?: QrType;
 }
 
-export default function AnalysisDetails({ analysis, score, type = QrType.URL }: AnalysisDetailsProps) {
-  const isUrl = type === QrType.URL;
-  
+export default function AnalysisDetails({ analysis, score }: AnalysisDetailsProps) {
   const factors = [
     {
       icon: <ShieldCheck className="w-4 h-4" />,
       label: 'Security Protocol',
-      value: !isUrl ? 'N/A' : (analysis.isHttps ? 'HTTPS Secure' : 'HTTP Insecure'),
-      impact: !isUrl ? 'Neutral' : (analysis.isHttps ? 'Safe' : 'Critical'),
-      color: !isUrl ? 'text-gray-400' : (analysis.isHttps ? 'text-[#00FF00]' : 'text-[#FF4444]'),
-      hidden: !isUrl
+      value: analysis.isHttps ? 'HTTPS Secure' : 'HTTP Insecure',
+      impact: analysis.isHttps ? 'Positive' : 'Critical',
+      color: analysis.isHttps ? 'text-[#00FF00]' : 'text-[#FF4444]'
     },
     {
       icon: <MapPin className="w-4 h-4" />,
       label: 'Hostname Format',
-      value: !isUrl ? 'N/A' : (analysis.usesIpAddress ? 'Direct IP Address' : 'Standard Hostname'),
-      impact: !isUrl ? 'Neutral' : (analysis.usesIpAddress ? 'Critical' : 'Safe'),
-      color: !isUrl ? 'text-gray-400' : (analysis.usesIpAddress ? 'text-[#FF4444]' : 'text-[#00FF00]'),
-      hidden: !isUrl
+      value: analysis.usesIpAddress ? 'Direct IP Address' : 'Standard Hostname',
+      impact: analysis.usesIpAddress ? 'Critical' : 'Safe',
+      color: analysis.usesIpAddress ? 'text-[#FF4444]' : 'text-[#00FF00]'
     },
     {
       icon: <Text className="w-4 h-4" />,
-      label: 'Content Pattern',
-      value: isUrl ? `${analysis.suspiciousKeywords.length} Detected` : 'Pattern Scanned',
+      label: 'Keywords Analysis',
+      value: `${analysis.suspiciousKeywords.length} Detected`,
       impact: analysis.suspiciousKeywords.length > 0 ? 'Negative' : 'Clean',
       color: analysis.suspiciousKeywords.length > 0 ? 'text-[#F27D26]' : 'text-[#00FF00]'
     },
     {
       icon: <Link className="w-4 h-4" />,
-      label: 'Payload Entropy',
-      value: isUrl ? `${analysis.subdomainDepth} Levels` : `${analysis.urlLength} Bytes`,
-      impact: isUrl ? (analysis.subdomainDepth > 2 ? 'Warning' : 'Low') : 'Verified',
-      color: isUrl ? (analysis.subdomainDepth > 2 ? 'text-[#F27D26]' : 'text-[#888]') : 'text-[#00FF00]'
+      label: 'Subdomain Depth',
+      value: `${analysis.subdomainDepth} Levels`,
+      impact: analysis.subdomainDepth > 2 ? 'Warning' : 'Low',
+      color: analysis.subdomainDepth > 2 ? 'text-[#F27D26]' : 'text-[#888]'
     }
   ];
 

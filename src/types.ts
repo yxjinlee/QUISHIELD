@@ -4,24 +4,6 @@ export enum RiskLevel {
   DANGEROUS = 'dangerous',
 }
 
-export enum QrType {
-  URL = 'url',
-  TEXT = 'text',
-  WIFI = 'wifi',
-  VCARD = 'vcard',
-  ENCODED = 'encoded',
-}
-
-export interface RiskFactor {
-  factor: string;
-  impact: number;
-}
-
-export interface RedirectHop {
-  url: string;
-  status: number;
-}
-
 export interface AnalysisDetails {
   usesIpAddress: boolean;
   isHttps: boolean;
@@ -36,11 +18,9 @@ export interface AnalysisDetails {
 export interface ScanResult {
   originalUrl: string;
   finalUrl: string;
-  redirectChain: RedirectHop[];
+  redirectChain: string[];
   riskScore: number;
   riskLevel: RiskLevel;
   analysis: AnalysisDetails;
-  breakdown: RiskFactor[];
-  type: QrType;
   timestamp: string;
 }

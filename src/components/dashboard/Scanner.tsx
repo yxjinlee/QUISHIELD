@@ -27,7 +27,7 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
 
     onScanStart();
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch('/api/analyze-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),

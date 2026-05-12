@@ -21,34 +21,12 @@ export default function App() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Analyzing Redirect Pipeline...');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
     }
     return 'dark';
   });
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isScanning) {
-      const messages = [
-        'Initializing Analysis Sequence...',
-        'Analyzing Redirect Pipeline...',
-        'Checking Threat Intelligence Databases...',
-        'Scanning for Punycode Spoofing...',
-        'Detecting Cloaking Patterns...',
-        'Finalizing Security Report...'
-      ];
-      let i = 0;
-      setLoadingMessage(messages[0]);
-      interval = setInterval(() => {
-        i = (i + 1) % messages.length;
-        setLoadingMessage(messages[i]);
-      }, 2000);
-    }
-    return () => clearInterval(interval);
-  }, [isScanning]);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -64,20 +42,17 @@ export default function App() {
   };
 
   const handleScanStart = () => {
-    console.log('[SCAN] Initializing analysis sequence...');
     setIsScanning(true);
     setError(null);
     setResult(null);
   };
 
   const handleScanComplete = (data: ScanResult) => {
-    console.log(`[SCAN] Analysis success. Risk Level: ${data.riskLevel}`);
     setResult(data);
     setIsScanning(false);
   };
 
   const handleScanError = (err: string) => {
-    console.warn(`[SCAN] Analysis halted: ${err}`);
     setError(err);
     setIsScanning(false);
   };
@@ -183,7 +158,7 @@ export default function App() {
                 <Loader2 className="w-16 h-16 text-[#F27D26] animate-spin" />
                 <div className="absolute inset-0 blur-xl bg-[#F27D26]/20 animate-pulse"></div>
               </div>
-              <p className="mt-8 font-mono text-xs uppercase tracking-widest text-gray-400 dark:text-[#888] min-h-[1em]">{loadingMessage}</p>
+              <p className="mt-8 font-mono text-xs uppercase tracking-widest text-gray-400 dark:text-[#888]">Analyzing Redirect Pipeline...</p>
             </motion.div>
           )}
 
