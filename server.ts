@@ -4,9 +4,9 @@ import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { extractUrlFromImage } from './src/services/qrService';
-import { traceRedirects } from './src/services/redirectService';
-import { analyzeUrl } from './src/services/analysisService';
+import { extractUrlFromImage } from './src/services/qrService.js';
+import { traceRedirects } from './src/services/redirectService.js';
+import { analyzeUrl } from './src/services/analysisService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,7 +33,7 @@ async function startServer() {
 
   // API Routes
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', version: '1.2', time: new Date().toISOString() });
+    res.json({ status: 'ok', version: '1.3', time: new Date().toISOString() });
   });
 
   app.post('/api/scan', upload.single('qrImage'), async (req, res, next) => {
@@ -138,7 +138,7 @@ async function startServer() {
 
   if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server v1.2 running on http://0.0.0.0:${PORT}`);
+      console.log(`Server v1.3 running on http://0.0.0.0:${PORT}`);
     });
   }
 
