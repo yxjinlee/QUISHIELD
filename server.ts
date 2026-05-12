@@ -136,11 +136,15 @@ async function startServer() {
     });
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server v1.2 running on http://0.0.0.0:${PORT}`);
-  });
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server v1.2 running on http://0.0.0.0:${PORT}`);
+    });
+  }
+
+  return app;
 }
 
-startServer().catch(err => {
+export const serverApp = startServer().catch(err => {
   console.error("FATAL: Server failed to start:", err);
 });
