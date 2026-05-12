@@ -46,14 +46,37 @@ export interface AnalysisDetails {
 
 // LOGIC: QR Extraction
 async function extractUrlFromImage(buffer: Buffer): Promise<string> {
+  console.log(`[QR] Processing buffer. Length: ${buffer.length}, Hex start: ${buffer.slice(0, 8).toString('hex')}`);
   try {
-    const uint8Array = new Uint8Array(buffer);
-    const image = await Jimp.read(uint8Array as any);
+    // Ensure we are working with a fresh view of the data
+    const dataArray = Uint8Array.from(buffer);
+    
+    // In Jimp v1.x, we pass the buffer/array directly
+    const image = await Jimp.read(dataArray as any);
+    console.log(`[QR] Image loaded: ${image.width}x${image.height}`);
+    
     const { data, width, height } = image.bitmap;
-    const code = jsQR(new Uint8ClampedArray(data), width, height);
-    if (code) return code.data;
-    throw new Error('QR code not detected in image');
+    
+    // jsQR expects Uint8ClampedArray
+    const code = jsQR(new Uint8ClampedArray(data), width, height, {
+      inversionAttempts: "dontInvert"
+    });
+    
+    if (code && code.data) {
+      console.log(`[QR] Decoded: ${code.data}`);
+      return code.data;
+    }
+
+    // Try again with inversion just in case
+    const codeInverted = jsQR(new Uint8ClampedArray(data), width, height, {
+      inversionAttempts: "attemptBoth"
+    });
+
+    if (codeInverted && codeInverted.data) return codeInverted.data;
+
+    throw new Error('QR code not detected in image. Please try a clearer picture.');
   } catch (err: any) {
+    console.error(`[QR FAIL] ${err.message}`);
     throw new Error(`QR Extraction failed: ${err.message}`);
   }
 }
@@ -133,7 +156,7 @@ function analyzeUrl(originalUrl: string, finalUrl: string, chain: string[]) {
 
 // API Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '2.0-beta', time: new Date().toISOString() });
+  res.json({ status: 'ok', version: '2.0.0', time: new Date().toISOString() });
 });
 
 app.post('/api/scan', upload.single('qrImage'), async (req, res) => {
@@ -176,6 +199,15 @@ app.post('/api/analyze-url', async (req, res) => {
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[CRITICAL SERVER ERROR]', err);
+  res.status(500).json({ 
+    error: 'A server error occurred. Please try again later.',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+  });
 });
 
 // Environment setup for local dev
