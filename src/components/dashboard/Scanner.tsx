@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, X, Camera } from 'lucide-react';
 import jsQR from 'jsqr';
+import { ScanResult, RiskLevel } from '../../types';
 import CameraScanner from './CameraScanner';
 
 interface ScannerProps {
   onScanStart: () => void;
-  onScanComplete: (result: any) => void;
+  onScanComplete: (result: ScanResult) => void;
   onScanError: (error: string) => void;
   onCameraToggle?: (active: boolean) => void;
 }
@@ -35,16 +36,11 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         originalUrl: decodedUrl,
         finalUrl: data.chain[data.chain.length - 1],
         redirectChain: data.chain,
-        riskScore: 0,
-        riskLevel: 'LOW',
+        riskScore: data.analysis.score,
+        riskLevel: data.analysis.level as RiskLevel,
         analysis: {
-          shortenerFound: data.chain.length > 1,
-          suspiciousKeywords: [],
-          redirectCount: data.chain.length - 1,
-          domainMismatch: false,
-          isEncoded: false,
-          isHttps: data.chain[data.chain.length - 1].startsWith('https:'),
-          urlLength: data.chain[data.chain.length - 1].length
+          ...data.analysis.details,
+          redirectCount: data.analysis.redirectCount
         },
         timestamp: new Date().toISOString()
       });
@@ -56,7 +52,7 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         finalUrl: decodedUrl,
         redirectChain: [decodedUrl],
         riskScore: 0,
-        riskLevel: 'LOW',
+        riskLevel: RiskLevel.LOW,
         analysis: {
           shortenerFound: false,
           suspiciousKeywords: [],
@@ -64,7 +60,10 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
           domainMismatch: false,
           isEncoded: false,
           isHttps: decodedUrl.startsWith('https:'),
-          urlLength: decodedUrl.length
+          urlLength: decodedUrl.length,
+          hyphenCount: 0,
+          subdomainDepth: 0,
+          isIpAddress: false
         },
         timestamp: new Date().toISOString()
       });

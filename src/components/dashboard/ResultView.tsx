@@ -10,6 +10,18 @@ interface ResultViewProps {
 export default function ResultView({ result }: ResultViewProps) {
   const [copied, setCopied] = useState(false);
 
+  const getRiskColor = () => {
+    if (result.riskLevel === 'HIGH') return 'text-red-500';
+    if (result.riskLevel === 'MEDIUM') return 'text-amber-500';
+    return 'text-green-500';
+  };
+
+  const getRiskBg = () => {
+    if (result.riskLevel === 'HIGH') return 'bg-red-500/10 border-red-500/20';
+    if (result.riskLevel === 'MEDIUM') return 'bg-amber-500/10 border-amber-500/20';
+    return 'bg-green-500/10 border-green-500/20';
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(result.originalUrl);
     setCopied(true);
@@ -23,12 +35,14 @@ export default function ResultView({ result }: ResultViewProps) {
         animate={{ opacity: 1, y: 0 }}
         className="p-8 rounded-[2.5rem] bg-white dark:bg-[#0D0D0D] border border-gray-100 dark:border-white/10 shadow-2xl flex flex-col items-center text-center"
       >
-        <div className="w-20 h-20 rounded-full bg-[#00FF00]/10 flex items-center justify-center mb-6 border border-[#00FF00]/20">
-          <CheckCircle className="w-10 h-10 text-[#00FF00]" />
+        <div className={`mb-6 flex gap-4 items-center px-6 py-3 rounded-full border ${getRiskBg()}`}>
+           <div className={`text-3xl font-mono font-bold ${getRiskColor()}`}>{result.riskScore}%</div>
+           <div className="w-[1px] h-6 bg-gray-200 dark:bg-white/10" />
+           <div className={`text-sm font-bold uppercase tracking-widest ${getRiskColor()}`}>RISK_{result.riskLevel}</div>
         </div>
         
-        <h3 className="text-3xl font-extrabold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">QR Code Decoded</h3>
-        <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">Decoded link found in the scan:</p>
+        <h3 className="text-3xl font-extrabold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">Intelligence Report</h3>
+        <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">Structural Analysis & Redirect Trace Complete</p>
 
         <div className="w-full bg-gray-50 dark:bg-[#151515] rounded-3xl p-6 border border-gray-100 dark:border-white/5 mb-8 relative overflow-hidden group">
           <div className="flex items-center gap-3 mb-4">
@@ -40,6 +54,22 @@ export default function ResultView({ result }: ResultViewProps) {
           <p className="text-xl font-mono text-gray-800 dark:text-[#F27D26] break-all leading-relaxed font-bold mb-6">
             {result.originalUrl}
           </p>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+             {[
+               { label: 'Subdomains', value: result.analysis.subdomainDepth, status: result.analysis.subdomainDepth > 2 ? 'warning' : 'safe' },
+               { label: 'Hyphens', value: result.analysis.hyphenCount, status: result.analysis.hyphenCount > 2 ? 'warning' : 'safe' },
+               { label: 'Security', value: result.analysis.isHttps ? 'HTTPS' : 'HTTP Only', status: result.analysis.isHttps ? 'safe' : 'danger' },
+               { label: 'Hostname', value: result.analysis.isIpAddress ? 'IP ADDR' : 'Domain', status: result.analysis.isIpAddress ? 'danger' : 'safe' }
+             ].map((feature, idx) => (
+               <div key={idx} className="p-3 bg-white dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5 text-left">
+                 <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter mb-1">{feature.label}</div>
+                 <div className={`text-xs font-mono font-bold ${feature.status === 'danger' ? 'text-red-500' : feature.status === 'warning' ? 'text-amber-500' : 'text-green-500'}`}>
+                   {feature.value}
+                 </div>
+               </div>
+             ))}
+          </div>
 
           {result.redirectChain.length > 1 && (
             <div className="mt-8 pt-8 border-t border-gray-200 dark:border-white/10 text-left">
