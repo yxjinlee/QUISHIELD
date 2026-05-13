@@ -19,10 +19,38 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
     onCameraToggle?.(showCamera);
   }, [showCamera, onCameraToggle]);
 
-  const processScan = (decodedUrl: string) => {
+  const processScan = async (decodedUrl: string) => {
     onScanStart();
-    // Simulate a brief "analysis" feel for UX, though we just show the link
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/trace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: decodedUrl }),
+      });
+
+      if (!response.ok) throw new Error('Tracing failed');
+      const data = await response.json();
+      
+      onScanComplete({
+        originalUrl: decodedUrl,
+        finalUrl: data.chain[data.chain.length - 1],
+        redirectChain: data.chain,
+        riskScore: 0,
+        riskLevel: 'LOW',
+        analysis: {
+          shortenerFound: data.chain.length > 1,
+          suspiciousKeywords: [],
+          redirectCount: data.chain.length - 1,
+          domainMismatch: false,
+          isEncoded: false,
+          isHttps: data.chain[data.chain.length - 1].startsWith('https:'),
+          urlLength: data.chain[data.chain.length - 1].length
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      console.error('Scan processing error:', err);
+      // Fallback if tracing fails
       onScanComplete({
         originalUrl: decodedUrl,
         finalUrl: decodedUrl,
@@ -40,7 +68,7 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
         },
         timestamp: new Date().toISOString()
       });
-    }, 800);
+    }
   };
 
   const handleFile = async (file: File) => {

@@ -35,11 +35,36 @@ export default function ResultView({ result }: ResultViewProps) {
              <div className="p-1.5 bg-[#F27D26]/10 rounded-lg">
                 <Globe className="w-4 h-4 text-[#F27D26]" />
              </div>
-             <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest font-bold">Encrypted_Payload_Data</span>
+             <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest font-bold">QR_DECODED_URL</span>
           </div>
-          <p className="text-xl font-mono text-gray-800 dark:text-[#F27D26] break-all leading-relaxed font-bold">
+          <p className="text-xl font-mono text-gray-800 dark:text-[#F27D26] break-all leading-relaxed font-bold mb-6">
             {result.originalUrl}
           </p>
+
+          {result.redirectChain.length > 1 && (
+            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-white/10 text-left">
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest font-bold block mb-4">Redirect_Chain_Chain</span>
+              <div className="space-y-4">
+                {result.redirectChain.map((url, i) => (
+                  <div key={i} className="flex gap-4 group/hop">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-mono text-[10px] font-bold ${i === result.redirectChain.length - 1 ? 'bg-[#F27D26] text-white border-[#F27D26]' : 'bg-white dark:bg-[#222] text-gray-400 dark:text-gray-500 border-gray-200 dark:border-white/10'}`}>
+                        {i + 1}
+                      </div>
+                      {i < result.redirectChain.length - 1 && (
+                        <div className="w-[2px] flex-1 bg-gray-200 dark:bg-white/5 my-1" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 pt-1.5">
+                       <p className={`text-xs font-mono break-all leading-relaxed ${i === result.redirectChain.length - 1 ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-400 dark:text-gray-500'}`}>
+                         {url}
+                       </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full">
