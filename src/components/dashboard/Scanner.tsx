@@ -145,9 +145,9 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
              <Upload className={`w-10 h-10 ${dragActive ? 'text-[#F27D26]' : 'text-gray-400 dark:text-gray-300'}`} />
           </div>
           
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">QR Scanner</h3>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">Protect Your Access</h3>
           <p className="text-gray-500 dark:text-gray-400 mb-10 text-center max-w-sm font-medium">
-            Scan a QR code from a file or directly through your camera to see its destination.
+            Drag and drop an image containing a QR code to verify its destination safely.
           </p>
 
           <input 
@@ -187,7 +187,7 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
           )}
 
           <p className="mt-10 text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
-            LOCAL_CAPTURE_ENABLED :: NO_SERVER_TRAFFIC
+            SECURE_SCAN :: PNG, JPG, WEBP, CAMERA
           </p>
         </div>
       </div>
