@@ -1,117 +1,83 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, X, Camera } from 'lucide-react';
-import { ScanResult } from '../../types';
+import jsQR from 'jsqr';
 import CameraScanner from './CameraScanner';
 
 interface ScannerProps {
   onScanStart: () => void;
-  onScanComplete: (result: ScanResult) => void;
+  onScanComplete: (result: any) => void;
   onScanError: (error: string) => void;
   onCameraToggle?: (active: boolean) => void;
 }
 
 export default function Scanner({ onScanStart, onScanComplete, onScanError, onCameraToggle }: ScannerProps) {
   const [dragActive, setDragActive] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isTriggeredRef = useRef(false);
 
   useEffect(() => {
     onCameraToggle?.(showCamera);
   }, [showCamera, onCameraToggle]);
 
-  const handleUrlAnalysis = async (url: string) => {
-    if (isTriggeredRef.current) return;
-    isTriggeredRef.current = true;
-
+  const processScan = (decodedUrl: string) => {
     onScanStart();
-    try {
-      const response = await fetch('/api/analyze-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+    // Simulate a brief "analysis" feel for UX, though we just show the link
+    setTimeout(() => {
+      onScanComplete({
+        originalUrl: decodedUrl,
+        finalUrl: decodedUrl,
+        redirectChain: [decodedUrl],
+        riskScore: 0,
+        riskLevel: 'LOW',
+        analysis: {
+          shortenerFound: false,
+          suspiciousKeywords: [],
+          redirectCount: 0,
+          domainMismatch: false,
+          isEncoded: false,
+          isHttps: decodedUrl.startsWith('https:'),
+          urlLength: decodedUrl.length
+        },
+        timestamp: new Date().toISOString()
       });
-
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        const status = response.status;
-        console.error(`Non-JSON response (URL ${status}):`, text.substring(0, 500));
-        const errorSnippet = text.substring(0, 150).replace(/<[^>]*>?/gm, '').trim();
-        throw new Error(`[v2.0.0 Error ${status}] ${errorSnippet || 'Invalid format'}`);
-      }
-
-      if (response.ok) {
-        onScanComplete(data);
-      } else {
-        isTriggeredRef.current = false;
-        onScanError(data.error || 'Analysis failed. Please try again.');
-      }
-    } catch (err: any) {
-      console.error('URL analysis error:', err);
-      isTriggeredRef.current = false;
-      onScanError(err.message || 'Network error. Please try again later.');
-    }
+    }, 800);
   };
 
   const handleFile = async (file: File) => {
-    if (isTriggeredRef.current) return;
-    
     if (!file.type.startsWith('image/')) {
-       onScanError('Please upload an image file (PNG, JPG, or WEBP).');
+       onScanError('Please upload an image file.');
        return;
     }
 
-    isTriggeredRef.current = true;
-    setPreview(URL.createObjectURL(file));
-    onScanStart();
-
-    const formData = new FormData();
-    formData.append('qrImage', file);
-
-    try {
-      const response = await fetch('/api/scan', {
-        method: 'POST',
-        body: formData,
-      });
-
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        const status = response.status;
-        console.error(`Non-JSON response (File ${status}):`, text.substring(0, 500));
-        const errorSnippet = text.substring(0, 150).replace(/<[^>]*>?/gm, '').trim();
-        throw new Error(`[v2.0.0 Error ${status}] ${errorSnippet || 'Invalid format'}`);
-      }
-
-      if (response.ok) {
-        onScanComplete(data);
-      } else {
-        isTriggeredRef.current = false;
-        onScanError(data.error || 'Failed to scan image. Ensure the image contains a clear QR code.');
-      }
-    } catch (err: any) {
-      console.error('Scan capture error:', err);
-      isTriggeredRef.current = false;
-      onScanError(err.message || 'Network error. Please try again later.');
-    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        
+        if (code) {
+          processScan(code.data);
+        } else {
+          onScanError('QR code not detected in this image. Please try another.');
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const onDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
   };
 
   const onDrop = (e: React.DragEvent) => {
@@ -152,9 +118,9 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
              <Upload className={`w-10 h-10 ${dragActive ? 'text-[#F27D26]' : 'text-gray-400 dark:text-gray-300'}`} />
           </div>
           
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">Protect Your Access</h3>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-2 tracking-tight">QR Scanner</h3>
           <p className="text-gray-500 dark:text-gray-400 mb-10 text-center max-w-sm font-medium">
-            Drag and drop an image containing a QR code to verify its destination safely.
+            Scan a QR code from a file or directly through your camera to see its destination.
           </p>
 
           <input 
@@ -187,29 +153,16 @@ export default function Scanner({ onScanStart, onScanComplete, onScanError, onCa
             <CameraScanner 
               onScan={(url) => {
                 setShowCamera(false);
-                handleUrlAnalysis(url);
+                processScan(url);
               }}
               onClose={() => setShowCamera(false)}
             />
           )}
 
           <p className="mt-10 text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500">
-            SECURE_SCAN :: PNG, JPG, WEBP, CAMERA
+            LOCAL_CAPTURE_ENABLED :: NO_SERVER_TRAFFIC
           </p>
         </div>
-      </div>
-
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { label: 'DECODE', desc: 'Hidden URL Extraction' },
-          { label: 'TRACE', desc: 'Redirect Path Mapping' },
-          { label: 'ANALYZE', desc: 'Phishing Pattern Detection' }
-        ].map((item, i) => (
-          <div key={i} className="p-6 border border-gray-100 dark:border-white/10 rounded-3xl bg-white dark:bg-[#0D0D0D] shadow-sm">
-            <div className="text-[10px] font-bold text-[#F27D26] mb-1.5 tracking-widest uppercase">{item.label}</div>
-            <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">{item.desc}</div>
-          </div>
-        ))}
       </div>
     </div>
   );

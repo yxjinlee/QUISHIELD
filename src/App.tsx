@@ -85,8 +85,8 @@ export default function App() {
                 <ShieldLogo className="text-[#F27D26]" size={36} />
               </div>
               <div className="text-left">
-                <h1 className="font-mono font-bold tracking-tighter text-xl uppercase italic text-gray-900 dark:text-gray-100 leading-none">QUISHIELD</h1>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest font-semibold mt-0.5">QR Security Intelligence</p>
+                <h1 className="font-mono font-bold tracking-tighter text-xl uppercase italic text-gray-900 dark:text-gray-100 leading-none">SCANNER</h1>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest font-semibold mt-0.5">LOCAL DECODE ENGINE</p>
               </div>
             </button>
             
@@ -132,9 +132,9 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
             >
               <div className={`max-w-2xl mx-auto text-center mb-12 transition-opacity duration-300 ${isCameraOpen ? 'opacity-0' : 'opacity-100'}`}>
-                <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-gray-50 mb-4 tracking-tight">QR Security Intelligence <span className="text-xs opacity-50">v2.0.0</span></h2>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-gray-50 mb-4 tracking-tight">Simple QR Scanner <span className="text-xs opacity-50">v3.0.0</span></h2>
                 <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
-                  Instantly decode QR codes, trace redirect chains, and reveal hidden phishing patterns before they reach your device.
+                  Instantly decode QR codes locally on your device. Fast, private, and secure.
                 </p>
               </div>
               <Scanner 
@@ -158,7 +158,7 @@ export default function App() {
                 <Loader2 className="w-16 h-16 text-[#F27D26] animate-spin" />
                 <div className="absolute inset-0 blur-xl bg-[#F27D26]/20 animate-pulse"></div>
               </div>
-              <p className="mt-8 font-mono text-xs uppercase tracking-widest text-gray-400 dark:text-[#888]">Analyzing Redirect Pipeline...</p>
+              <p className="mt-8 font-mono text-xs uppercase tracking-widest text-gray-400 dark:text-[#888]">Decoding QR Payload...</p>
             </motion.div>
           )}
 
